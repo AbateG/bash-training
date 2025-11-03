@@ -4,7 +4,7 @@
 // in Node (tests) but bundlers expect ESM. Import the default and normalize.
 // Try to import the CJS wrapper that re-exports content in a bundler-friendly way.
 import modulesCJS from '../../modules.cjs';
-const modules = (modulesCJS && modulesCJS.modules) ? modulesCJS.modules : modulesCJS;
+const modules = modulesCJS && modulesCJS.modules ? modulesCJS.modules : modulesCJS;
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 
@@ -24,24 +24,24 @@ let virtualFS = {
   '/': {
     type: 'dir',
     children: {
-      'home': {
+      home: {
         type: 'dir',
         children: {
-          'user': {
+          user: {
             type: 'dir',
             children: {
               'file1.txt': { type: 'file', content: 'This is file1.txt\n' },
               'file2.txt': { type: 'file', content: 'This is file2.txt\n' },
-              'directory1': {
+              directory1: {
                 type: 'dir',
-                children: {}
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+                children: {},
+              },
+            },
+          },
+        },
+      },
+    },
+  },
 };
 
 let currentPath = '/home/user';
@@ -96,15 +96,15 @@ function initTerminal() {
   const fitAddon = new FitAddon();
   terminal.loadAddon(fitAddon);
   terminal.open(document.getElementById('terminal'));
-    fitAddon.fit();
-    // Ensure the terminal accepts keyboard input immediately
-    terminal.focus();
-    // Explicitly allow stdin (in case an environment set it off)
-    try {
-      terminal.setOption('disableStdin', false);
-    } catch (e) {
-      // Older xterm versions may not support setOption; ignore safely
-    }
+  fitAddon.fit();
+  // Ensure the terminal accepts keyboard input immediately
+  terminal.focus();
+  // Explicitly allow stdin (in case an environment set it off)
+  try {
+    terminal.setOption('disableStdin', false);
+  } catch (e) {
+    // Older xterm versions may not support setOption; ignore safely
+  }
 
   // Make terminal globally accessible
   window.terminal = terminal;
@@ -161,7 +161,9 @@ function initTerminal() {
     btnSim.style.fontSize = '12px';
     btnSim.addEventListener('click', () => {
       // force simulated terminal
-      try { if (socket) socket.close(); } catch (e) {}
+      try {
+        if (socket) socket.close();
+      } catch (e) {}
       remoteConnected = false;
       setMode('simulated');
       useLocalSimulated();
@@ -186,12 +188,14 @@ function initTerminal() {
       const body = document.body;
       const isLight = body.classList.toggle('light-theme');
       btnTheme.textContent = isLight ? 'Light' : 'Dark';
-      try { localStorage.setItem('theme', isLight ? 'light' : 'dark'); } catch (e) {}
+      try {
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+      } catch (e) {}
     });
 
     // Font size control
     const fontSelect = document.createElement('select');
-    ['12','14','16','18'].forEach(sz => {
+    ['12', '14', '16', '18'].forEach((sz) => {
       const opt = document.createElement('option');
       opt.value = sz;
       opt.textContent = sz + 'px';
@@ -204,7 +208,9 @@ function initTerminal() {
       try {
         terminal.setOption && terminal.setOption('fontSize', size);
       } catch (e) {}
-      try { localStorage.setItem('fontSize', String(size)); } catch (e) {}
+      try {
+        localStorage.setItem('fontSize', String(size));
+      } catch (e) {}
     });
 
     status.appendChild(mode);
@@ -233,7 +239,7 @@ function initTerminal() {
   // Only attempt WebSocket connection if the page was loaded from an http(s) origin.
   if (window.location && window.location.host) {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  let socketUrl = `${protocol}://${window.location.host}/pty`;
+    let socketUrl = `${protocol}://${window.location.host}/pty`;
 
     // Single input handler: forward to backend when connected, otherwise handle locally
     terminal.onData((data) => {
@@ -254,10 +260,11 @@ function initTerminal() {
     });
 
     // Fetch token and include in URL
-    fetchToken().then(token => {
-      if (token) {
-        socketUrl += `?token=${token}`;
-      }
+    fetchToken()
+      .then((token) => {
+        if (token) {
+          socketUrl += `?token=${token}`;
+        }
 
         // Try the proxied URL first, then fall back to the backend server at port 3000
         const hostname = window.location.hostname || 'localhost';
@@ -300,12 +307,16 @@ function initTerminal() {
             // Focus the terminal when connected
             terminal.focus();
             // Send initial resize
-            socket.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+            socket.send(
+              JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })
+            );
           };
 
           socket.onmessage = (ev) => {
             // Server sends raw text for terminal output
-            terminal.write(typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data));
+            terminal.write(
+              typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data)
+            );
           };
 
           socket.onerror = () => {
@@ -333,12 +344,15 @@ function initTerminal() {
         window.addEventListener('resize', () => {
           fitAddon.fit();
           if (socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows }));
+            socket.send(
+              JSON.stringify({ type: 'resize', cols: terminal.cols, rows: terminal.rows })
+            );
           }
         });
-    }).catch(() => {
-      useLocalSimulated();
-    });
+      })
+      .catch(() => {
+        useLocalSimulated();
+      });
   } else {
     // File:// or unknown origin — use offline simulation
     useLocalSimulated();
@@ -520,7 +534,7 @@ function resolvePath(path) {
     return currentPath;
   }
   if (path === '..') {
-    const parts = currentPath.split('/').filter(p => p);
+    const parts = currentPath.split('/').filter((p) => p);
     parts.pop();
     return '/' + parts.join('/');
   }
@@ -528,7 +542,7 @@ function resolvePath(path) {
 }
 
 function getNode(path) {
-  const parts = path.split('/').filter(p => p);
+  const parts = path.split('/').filter((p) => p);
   let node = virtualFS['/'];
   for (const part of parts) {
     if (node.type !== 'dir' || !node.children[part]) {
@@ -540,7 +554,7 @@ function getNode(path) {
 }
 
 function createNode(path, type, content = '') {
-  const parts = path.split('/').filter(p => p);
+  const parts = path.split('/').filter((p) => p);
   let node = virtualFS['/'];
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
@@ -558,7 +572,7 @@ function createNode(path, type, content = '') {
 }
 
 function removeNode(path) {
-  const parts = path.split('/').filter(p => p);
+  const parts = path.split('/').filter((p) => p);
   let node = virtualFS['/'];
   for (let i = 0; i < parts.length - 1; i++) {
     const part = parts[i];
@@ -630,10 +644,12 @@ function processCommand(cmd, terminal = window.terminal) {
         terminal.writeln('');
         appendToOutput('\n');
       } else {
-        const output = items.map(item => {
-          const child = node.children[item];
-          return child.type === 'dir' ? item + '/' : item;
-        }).join('  ');
+        const output = items
+          .map((item) => {
+            const child = node.children[item];
+            return child.type === 'dir' ? item + '/' : item;
+          })
+          .join('  ');
         terminal.writeln('');
         terminal.writeln(output);
         terminal.writeln('');
@@ -664,8 +680,12 @@ function processCommand(cmd, terminal = window.terminal) {
       if (createNode(path, 'dir')) {
         // Success, no output
       } else {
-        terminal.writeln(`mkdir: cannot create directory '${args[1]}': File exists or invalid path`);
-        appendToOutput(`mkdir: cannot create directory '${args[1]}': File exists or invalid path\n`);
+        terminal.writeln(
+          `mkdir: cannot create directory '${args[1]}': File exists or invalid path`
+        );
+        appendToOutput(
+          `mkdir: cannot create directory '${args[1]}': File exists or invalid path\n`
+        );
       }
       break;
     }
@@ -724,8 +744,12 @@ function processCommand(cmd, terminal = window.terminal) {
       if (createNode(destPath, 'file', sourceNode.content)) {
         // Success, no output
       } else {
-        terminal.writeln(`cp: cannot create regular file '${args[2]}': File exists or invalid path`);
-        appendToOutput(`cp: cannot create regular file '${args[2]}': File exists or invalid path\n`);
+        terminal.writeln(
+          `cp: cannot create regular file '${args[2]}': File exists or invalid path`
+        );
+        appendToOutput(
+          `cp: cannot create regular file '${args[2]}': File exists or invalid path\n`
+        );
       }
       break;
     }
@@ -748,8 +772,12 @@ function processCommand(cmd, terminal = window.terminal) {
         removeNode(sourcePath);
         // Success, no output
       } else {
-        terminal.writeln(`mv: cannot move '${args[1]}' to '${args[2]}': File exists or invalid path`);
-        appendToOutput(`mv: cannot move '${args[1]}' to '${args[2]}': File exists or invalid path\n`);
+        terminal.writeln(
+          `mv: cannot move '${args[1]}' to '${args[2]}': File exists or invalid path`
+        );
+        appendToOutput(
+          `mv: cannot move '${args[1]}' to '${args[2]}': File exists or invalid path\n`
+        );
       }
       break;
     }
@@ -814,7 +842,8 @@ function handleTerminalInput(data) {
   }
 
   // Arrow keys for history
-  if (data === '\x1b[A') { // Up arrow
+  if (data === '\x1b[A') {
+    // Up arrow
     if (historyIndex > 0) {
       historyIndex--;
       _inputBuffer = commandHistory[historyIndex];
@@ -823,7 +852,8 @@ function handleTerminalInput(data) {
     }
     return;
   }
-  if (data === '\x1b[B') { // Down arrow
+  if (data === '\x1b[B') {
+    // Down arrow
     if (historyIndex < commandHistory.length - 1) {
       historyIndex++;
       _inputBuffer = commandHistory[historyIndex];

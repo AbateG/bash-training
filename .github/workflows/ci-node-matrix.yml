@@ -1,0 +1,55 @@
+name: CI (Node matrix)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-build:
+    name: Test & Build (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 24]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint (optional)
+        run: npm run lint || true
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build client
+        run: npm run build
+
+      - name: Start server (background)
+        run: |
+          export NODE_ENV=test
+          nohup npm start > server.log 2>&1 &
+
+      - name: Wait for server
+        run: |
+          for i in {1..30}; do
+            if curl -sSf http://localhost:3000/token >/dev/null 2>&1; then
+              echo "server is up" && break
+            fi
+            sleep 1
+          done
+
+      - name: Smoke check /token
+        run: |
+          curl -sSf http://localhost:3000/token | jq -r '.token' > /dev/null
